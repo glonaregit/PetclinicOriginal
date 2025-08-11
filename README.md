@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Spring PetClinic Sample Application  
 # Modified By DevOps Shack  https://www.youtube.com/@devopsshack
 
@@ -229,3 +230,6 @@ For pull requests, editor preferences are available in the [editor config](.edit
 
 
 
+=======
+# PetclinicOriginal
+>>>>>>> ada1bfd3741450facb59a12bb8763ce7892f348a
