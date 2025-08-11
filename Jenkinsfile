@@ -65,7 +65,8 @@ pipeline {
         
         stage("TRIVY"){
             steps{
-                sh " trivy image gulshan126/pet-clinic2:latest"
+                sh 'trivy image --no-progress --no-color --format json gulshan126/pet-clinic2:latest > trivy-result.json'
+        archiveArtifacts artifacts: 'trivy-result.json', fingerprint: true
             }
         }
 
