@@ -31,14 +31,26 @@ pipeline {
             }
         }
         
-        stage("OWASP Dependency Check"){
-            steps{
-                dependencyCheck additionalArguments: '--scan ./ --format HTML ', odcInstallation: 'owasp'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+        stage('OWASP Dependency Check') {
+            steps {
+                dependencyCheck additionalArguments: '--scan target/', odcInstallation: 'owasp'
+            }
+        }
+        
+        stage('Publish OWASP Dependency Check Report') {
+            steps {
+                publishHTML(target: [
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'target',
+                    reportFiles: 'dependency-check-report.html',
+                    reportName: 'OWASP Dependency Check Report'
+                ])
             }
         }
              
-              
+        
         
     }
 }
