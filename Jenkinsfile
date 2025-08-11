@@ -57,7 +57,7 @@ pipeline {
                         
                         sh "docker build -t image1 ."
                         sh "docker tag image1 gulshan126/pet-clinic1:latest "
-                        sh "docker push adijaiswal/pet-clinic1:latest "
+                        sh "docker push gulshan126/pet-clinic1:latest "
                     }
                 }
             }
