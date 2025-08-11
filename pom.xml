@@ -277,6 +277,12 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.8.6</version>
+        </dependency>
+
         <!-- JAXB and Activation added for Java 9 compatibility.
              The JAXB API is considered to be Java EE API and therefore is
              no longer contained on the default class path in Java SE 9 -->
