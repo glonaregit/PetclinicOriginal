@@ -37,7 +37,7 @@ pipeline {
             }
         }
         
-        stage('Publish OWASP Dependency Check Report') {
+        stage('Publish OWASP Dependency Report') {
             steps {
                 publishHTML(target: [
                     allowMissing: false,
