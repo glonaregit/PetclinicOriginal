@@ -472,8 +472,8 @@
                     </to>
                 </configuration>
             </plugin>
-
-            <plugin>
+        
+        <plugin>
       <groupId>org.owasp</groupId>
       <artifactId>dependency-check-maven</artifactId>
       <version>INSERT_VERSION_HERE</version>
