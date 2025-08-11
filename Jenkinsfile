@@ -12,18 +12,14 @@ pipeline {
     stages{
         
                
-        stage("Compile"){
+         stage("Maven Build and test"){
             steps{
-                sh "mvn clean compile"
+                sh " mvn clean install"
             }
         }
         
-         stage("Test Cases"){
-            steps{
-                sh "mvn test"
-            }
-        }
-        
+
+               
         stage("Sonarqube Analysis "){
             steps{
                 withSonarQubeEnv('sonar-scanner') {
@@ -35,12 +31,7 @@ pipeline {
             }
         }
         
-            stage("Build"){
-            steps{
-                sh " mvn clean install"
-            }
-        }
-        
+             
               
         
     }
