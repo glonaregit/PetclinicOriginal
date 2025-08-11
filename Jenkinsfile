@@ -62,6 +62,12 @@ pipeline {
                 }
             }
         }
+        
+        stage("TRIVY"){
+            steps{
+                sh " trivy image gulshan126/pet-clinic2:latest"
+            }
+        }
 
         stage('Deploy To Docker Container') {
             steps {
