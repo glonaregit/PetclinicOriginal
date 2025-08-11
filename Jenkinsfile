@@ -62,6 +62,16 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy To Docker Container') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
+                        sh "docker run -d --name petclinic -p 8082:8082 gulshan126/pet-clinic1:latest"
+                    }
+                }
+            }
+        }
         
     }
 }
