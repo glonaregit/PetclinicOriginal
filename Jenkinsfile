@@ -56,8 +56,8 @@ pipeline {
                    withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
                         
                         sh "docker build -t image1 ."
-                        sh "docker tag image1 gulshan126/pet-clinic1:latest "
-                        sh "docker push gulshan126/pet-clinic1:latest "
+                        sh "docker tag image1 gulshan126/pet-clinic2:latest "
+                        sh "docker push gulshan126/pet-clinic2:latest "
                     }
                 }
             }
@@ -67,7 +67,7 @@ pipeline {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
-                        sh "docker run -d --name petclinic -p 8082:8082 gulshan126/pet-clinic1:latest"
+                        sh "docker run -d --name petclinic -p 8082:8082 gulshan126/pet-clinic2:latest"
                     }
                 }
             }
