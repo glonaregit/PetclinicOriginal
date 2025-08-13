@@ -31,7 +31,7 @@ pipeline {
         
         stage('OWASP Dependency Check') {
             steps {
-                dependencyCheck additionalArguments: '--scan target/', odcInstallation: 'owasp',prettyPrint
+                dependencyCheck additionalArguments: '--scan target/', odcInstallation: 'owasp',prettyPrint: true
                 junit allowEmptyResults: true, stdioRetention: '', testResults: 'dependency-check-junit.xml'
             }
         }
