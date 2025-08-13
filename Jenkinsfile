@@ -1,30 +1,30 @@
 pipeline {
     agent any 
-    
-    tools{
+
+    tools {
         maven 'maven3'
     }
     
     environment {
-        SCANNER_HOME=tool 'sonar-scanner'
+        SCANNER_HOME = tool 'sonar-scanner'
+        DOCKER_IMAGE_NAME = "gulshan126/pet-clinic2"
+        DOCKER_IMAGE_TAG = "v${env.BUILD_NUMBER}"
     }
     
-    stages{
+    stages {
         
-               
-         stage("Maven Build and test"){
-            steps{
-                sh " mvn clean install"
+        stage("Maven Build and test") {
+            steps {
+                sh "mvn clean install"
             }
         }
 
-        stage("Sonarqube Analysis "){
-            steps{
+        stage("Sonarqube Analysis ") {
+            steps {
                 withSonarQubeEnv('sonar-scanner') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Petclinic1 \
-                    -Dsonar.java.binaries=. \
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Petclinic1 \\
+                    -Dsonar.java.binaries=. \\
                     -Dsonar.projectKey=Petclinic1 '''
-    
                 }
             }
         }
@@ -48,24 +48,22 @@ pipeline {
                 ])
             }
         }
-             
-        stage("Docker Build & Push"){
-            steps{
-                script{
-                   withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
-                        
-                        sh "docker build -t image1 ."
-                        sh "docker tag image1 gulshan126/pet-clinic2:latest "
-                        sh "docker push gulshan126/pet-clinic2:latest "
+        
+        stage("Docker Build & Push") {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
+                        sh "docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ."
+                        sh "docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
                     }
                 }
             }
         }
         
-        stage("TRIVY"){
-            steps{
-                sh 'trivy image --no-progress --format json gulshan126/pet-clinic2:latest > trivy-result.json'
-        archiveArtifacts artifacts: 'trivy-result.json', fingerprint: true
+        stage("TRIVY") {
+            steps {
+                sh "trivy image --no-progress --format json ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} > trivy-result.json"
+                archiveArtifacts artifacts: 'trivy-result.json', fingerprint: true
             }
         }
 
@@ -73,7 +71,8 @@ pipeline {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
-                        sh "docker run -d --name petclinic -p 8082:8080 gulshan126/pet-clinic2:latest"
+                        // Use the new tag for deployment
+                        sh "docker run -d --name petclinic -p 8082:8080 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
                     }
                 }
             }
@@ -81,4 +80,3 @@ pipeline {
         
     }
 }
-
