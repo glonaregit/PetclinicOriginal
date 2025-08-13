@@ -74,7 +74,8 @@ pipeline {
         }
 
         stage('Deploy To Docker Container') {
-            script {
+            steps {
+                script {
             withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
                 def containerPort = "8082"
                 def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
@@ -92,6 +93,7 @@ pipeline {
                 sh "docker run -d --name ${newContainerName} -p ${containerPort}:8080 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
             }
         }
+            }
         }
         
     }
