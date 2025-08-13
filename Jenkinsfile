@@ -68,7 +68,12 @@ pipeline {
         
         stage("TRIVY") {
             steps {
-                sh "trivy image --no-progress --format json ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} > trivy-result.json"
+                script {
+                sh """
+                        trivy image --no-progress --format json -o trivy-result.json ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                        trivy convert --format template --template "@trivy-html.tpl" trivy-result.json -o trivy-result.html
+                     """
+                }
                 archiveArtifacts artifacts: 'trivy-result.json', fingerprint: true
             }
         }
