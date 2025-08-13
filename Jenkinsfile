@@ -74,14 +74,24 @@ pipeline {
         }
 
         stage('Deploy To Docker Container') {
-            steps {
-                script {
-                    withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
-                        // Use the new tag for deployment
-                        sh "docker run -d --name petclinic${DOCKER_IMAGE_TAG} -p 8082:8080 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
-                    }
+            script {
+            withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
+                def containerPort = "8082"
+                def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
+
+                // Check for a running container on the same host port
+                def existingContainerId = sh(script: "docker ps -q --filter 'publish=${containerPort}'", returnStdout: true).trim()
+
+                if (existingContainerId) {
+                    echo "Stopping and removing existing container on port ${containerPort} with ID: ${existingContainerId}"
+                    sh "docker stop ${existingContainerId}"
+                    sh "docker rm ${existingContainerId}"
                 }
+
+                // Deploy the new container
+                sh "docker run -d --name ${newContainerName} -p ${containerPort}:8080 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
             }
+        }
         }
         
     }
