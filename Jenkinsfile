@@ -78,7 +78,7 @@ pipeline {
                 script {
                     withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
                         // Use the new tag for deployment
-                        sh "docker run -d --name petclinic -p 8082:8080 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+                        sh "docker run -d --name petclinic${DOCKER_IMAGE_TAG} -p 8082:8080 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
                     }
                 }
             }
