@@ -30,9 +30,7 @@ pipeline {
                         -Dsonar.projectKey=Petclinic1
                     '''
                 }
-                timeout(time: 2, unit: 'MINUTES') {
-                 waitForQualityGate abortPipeline: true
-                }
+                    waitForQualityGate abortPipeline: true
             }
         }
         
