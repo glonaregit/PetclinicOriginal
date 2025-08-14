@@ -43,7 +43,7 @@ pipeline {
                     --disableYarnAudit \
                     --prettyPrint
                 ''', odcInstallation: 'owasp'
-                junit allowEmptyResults: true, stdioRetention: '', testResults: 'dependency-check-junit.xml'
+                //junit allowEmptyResults: true, stdioRetention: '', testResults: 'dependency-check-junit.xml'
             }
         }
         
