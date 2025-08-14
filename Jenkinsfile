@@ -9,7 +9,7 @@ pipeline {
         SCANNER_HOME = tool 'sonar-scanner'
         DOCKER_IMAGE_NAME = "gulshan126/pet-clinic2"
         DOCKER_IMAGE_TAG = "v${env.BUILD_NUMBER}"
-        
+
     }
     
     stages {
@@ -30,7 +30,9 @@ pipeline {
                         -Dsonar.projectKey=Petclinic1
                     '''
                 }
-                
+                timeout(time: 2, unit: 'MINUTES') {
+                 waitForQualityGate abortPipeline: true
+                }
             }
         }
         
