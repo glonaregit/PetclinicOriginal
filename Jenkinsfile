@@ -9,6 +9,7 @@ pipeline {
         SCANNER_HOME = tool 'sonar-scanner'
         DOCKER_IMAGE_NAME = "gulshan126/pet-clinic2"
         DOCKER_IMAGE_TAG = "v${env.BUILD_NUMBER}"
+        
     }
     
     stages {
