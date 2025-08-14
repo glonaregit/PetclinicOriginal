@@ -4,7 +4,7 @@
 #CMD ["catalina.sh", "run"]
 
 # ===== Stage 1: Build the WAR file =====
-FROM maven:3.8.8-openjdk-8 AS build
+FROM maven:3.8.8-eclipse-temurin-8 AS build
 WORKDIR /app
 
 # Copy pom.xml and download dependencies first (cache layer)
@@ -16,7 +16,7 @@ COPY src ./src
 RUN mvn package -DskipTests
 
 # ===== Stage 2: Run with Tomcat =====
-FROM tomcat:9.0-jdk8-openjdk
+FROM tomcat:9.0-jdk8-temurin
 WORKDIR /usr/local/tomcat/webapps/
 
 # Remove default ROOT app if not needed
