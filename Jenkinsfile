@@ -60,12 +60,11 @@ pipeline {
             }
         }
         
-        stage("Docker Build & Push") {
+        stage("Docker Build") {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
                         sh "docker build -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ."
-                        sh "docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
                     }
                 }
             }
@@ -75,6 +74,16 @@ pipeline {
             steps {
                 sh "trivy image --no-progress --format json ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} > trivy-result.json"
                 archiveArtifacts artifacts: 'trivy-result.json', fingerprint: true
+            }
+        }
+
+        stage("Docker Push") {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
+                        sh "docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+                    }
+                }
             }
         }
 
