@@ -13,33 +13,37 @@ pipeline {
     
     stages {
         
-        stage("Maven Build and test") {
+        stage("Maven Build and Test") {
             steps {
                 sh "mvn clean install"
             }
         }
 
-        stage("Sonarqube Analysis ") {
+        stage("SonarQube Analysis") {
             steps {
                 withSonarQubeEnv('sonar-scanner') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Petclinic1 \\
-                    -Dsonar.java.binaries=. \\
-                    -Dsonar.projectKey=Petclinic1 '''
+                    sh '''
+                        $SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectName=Petclinic1 \
+                        -Dsonar.java.binaries=. \
+                        -Dsonar.projectKey=Petclinic1
+                    '''
+                }
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
-            timeout(time: 2, unit: 'MINUTES') {
-            waitForQualityGate abortPipeline: true
         }
-        }
+        
         stage('OWASP Dependency Check') {
             steps {
-                //dependencyCheck additionalArguments: '--scan target/', odcInstallation: 'owasp',prettyPrint: true
                 dependencyCheck additionalArguments: '''
-                            --scan 'target/' 
-                            --out \'./\'  
-                            --format \'ALL\' 
-                            --disableYarnAudit \
-                            --prettyPrint''',odcInstallation: 'owasp'
+                    --scan 'target/' 
+                    --out './'  
+                    --format 'ALL' 
+                    --disableYarnAudit \
+                    --prettyPrint
+                ''', odcInstallation: 'owasp'
                 junit allowEmptyResults: true, stdioRetention: '', testResults: 'dependency-check-junit.xml'
             }
         }
@@ -78,25 +82,27 @@ pipeline {
         stage('Deploy To Docker Container') {
             steps {
                 script {
-            withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
-                def containerPort = "8082"
-                def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
+                    withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
+                        def containerPort = "8082"
+                        def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
 
-                // Check for a running container on the same host port
-                def existingContainerId = sh(script: "docker ps -q --filter 'publish=${containerPort}'", returnStdout: true).trim()
+                        // Check for a running container on the same host port
+                        def existingContainerId = sh(
+                            script: "docker ps -q --filter 'publish=${containerPort}'", 
+                            returnStdout: true
+                        ).trim()
 
-                if (existingContainerId) {
-                    echo "Stopping and removing existing container on port ${containerPort} with ID: ${existingContainerId}"
-                    sh "docker stop ${existingContainerId}"
-                    sh "docker rm ${existingContainerId}"
+                        if (existingContainerId) {
+                            echo "Stopping and removing existing container on port ${containerPort} with ID: ${existingContainerId}"
+                            sh "docker stop ${existingContainerId}"
+                            sh "docker rm ${existingContainerId}"
+                        }
+
+                        // Deploy the new container
+                        sh "docker run -d --name ${newContainerName} -p ${containerPort}:8080 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+                    }
                 }
-
-                // Deploy the new container
-                sh "docker run -d --name ${newContainerName} -p ${containerPort}:8080 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
             }
         }
-            }
-        }
-        
     }
 }
