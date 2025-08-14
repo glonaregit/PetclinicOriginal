@@ -30,7 +30,7 @@ pipeline {
             timeout(time: 2, unit: 'MINUTES') {
             waitForQualityGate abortPipeline: true
         }
-        
+        }
         stage('OWASP Dependency Check') {
             steps {
                 //dependencyCheck additionalArguments: '--scan target/', odcInstallation: 'owasp',prettyPrint: true
@@ -99,5 +99,4 @@ pipeline {
         }
         
     }
-}
 }
