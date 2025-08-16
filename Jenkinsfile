@@ -116,25 +116,25 @@ pipeline {
         // }
 
         // 
-        stage('Delete the existing Docker Container running on 8082') {
+        stage('Delete Docker Container') {
     steps {
         script {
-            def containerPort = "8082"
-
             withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
                 withEnv(["SSHPASS=${SSH_PASS}"]) {
                     sh """
-                        sshpass -e ssh -o StrictHostKeyChecking=no \$SSH_USER@\$VM_HOST < EOF_SCRIPT
-                        echo "Checking for existing container on port ${containerPort}..."
-                        EXISTING_CONTAINER_ID=\$(sudo docker ps -q --filter "publish=${containerPort}")
-                        if [ -n "\$EXISTING_CONTAINER_ID" ]; then
-                            echo "Stopping and removing existing container with ID: \$EXISTING_CONTAINER_ID"
-                            sudo docker stop \$EXISTING_CONTAINER_ID
-                            sudo docker rm \$EXISTING_CONTAINER_ID
-                        else
-                            echo "No existing container found on port ${containerPort}. Proceeding."
-                        fi
-                    EOF_SCRIPT
+                    sshpass -e ssh -o StrictHostKeyChecking=no \$SSH_USER@\$VM_HOST <<'END_SCRIPT'
+                        # Check for a running container on the same host port
+                        def existingContainerId = sh(
+                            script: "docker ps -q --filter 'publish=${containerPort}'", 
+                            returnStdout: true
+                        ).trim()
+
+                        if (existingContainerId) {
+                            echo "Stopping and removing existing container on port ${containerPort} with ID: ${existingContainerId}"
+                            sh "docker stop ${existingContainerId}"
+                            sh "docker rm ${existingContainerId}"
+                        }
+                    END_SCRIPT
                     """
                 }
             }
