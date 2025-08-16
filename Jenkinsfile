@@ -125,29 +125,31 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
                         withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
 
-                            sh """
-                                sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no \$SSH_USER@${VM_HOST} << EOF
+                            sh '''
+                                sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no "$SSH_USER@$VM_HOST" << 'ENDSSH'
 
                                     echo "Pulling latest Docker image: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
-                                    docker pull ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                                    sudo docker pull ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
 
                                     echo "Checking for existing container on port ${containerPort}..."
-                                    existing_container=\$(docker ps -q --filter "publish=${containerPort}")
-                                    if [ ! -z "\$existing_container" ]; then
-                                        echo "Stopping and removing existing container with ID: \$existing_container"
-                                        docker stop \$existing_container
-                                        docker rm \$existing_container
+                                    container_id=$(sudo docker ps -q --filter "publish=${containerPort}")
+                                    if [ -n "$container_id" ]; then
+                                        echo "Stopping and removing existing container..."
+                                        sudo docker stop $container_id
+                                        sudo docker rm $container_id
                                     fi
 
-                                    echo "Running new container: ${newContainerName}"
-                                    docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
-                                EOF
-                            """
+                                    echo "Starting new container: ${newContainerName}"
+                                    sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+
+                                ENDSSH
+                            '''
                         }
                     }
                 }
             }
         }
+
 
 
     }
