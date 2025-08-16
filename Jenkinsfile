@@ -150,7 +150,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
                     withCredentials([usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh """
-                        sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no $SSH_USER@$VM_HOST <<EOF
+                        sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no $SSH_USER@$VM_HOST <<'EOF'
                             echo "Logging in to Docker Hub..."
                             echo "$DOCKER_PASS" | sudo docker login -u "$DOCKER_USER" --password-stdin
 
