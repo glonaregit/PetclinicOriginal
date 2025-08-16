@@ -138,7 +138,37 @@ pipeline {
            }
         }
 
- stage('Deploy To Docker Container on Azure VM') {
+        // stage('Deploy To Docker Container on Azure VM') {
+        //     steps {
+        //         script {
+        //             def containerPort = "8082"
+        //             def internalAppPort = "8080"
+        //             def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
+        //             def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+
+        //             withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
+        //                 withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+        //                     withCredentials([usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+        //                         sh """
+        //                         sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no $SSH_USER@$VM_HOST <<'EOF'
+        //                             echo "Logging in to Docker Hub..."
+        //                             echo "$DOCKER_PASS" | sudo docker login -u "$DOCKER_USER" --password-stdin
+
+        //                             echo "Pulling latest Docker image: ${imageNameWithTag}"
+        //                             sudo docker pull ${imageNameWithTag}
+
+        //                             echo "Running new container: ${newContainerName}"
+        //                             sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${imageNameWithTag}
+        //                         EOF
+        //                         """
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+
+        stage('Deploy on Azure VM') {
     steps {
         script {
             def containerPort = "8082"
@@ -147,9 +177,11 @@ pipeline {
             def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
 
             withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
-                withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-                    withCredentials([usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                        sh """
+                withCredentials([
+                    usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS'),
+                    usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+                ]) {
+                    sh(script: '''
                         sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no $SSH_USER@$VM_HOST <<'EOF'
                             echo "Logging in to Docker Hub..."
                             echo "$DOCKER_PASS" | sudo docker login -u "$DOCKER_USER" --password-stdin
@@ -160,13 +192,13 @@ pipeline {
                             echo "Running new container: ${newContainerName}"
                             sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${imageNameWithTag}
                         EOF
-                        """
-                    }
+                    ''')
                 }
             }
         }
     }
 }
+
 
 
 
