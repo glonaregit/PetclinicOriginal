@@ -138,7 +138,7 @@ pipeline {
            }
         }
 
-        stage('Deploy To Docker Container on Azure VM') {
+ stage('Deploy To Docker Container on Azure VM') {
     steps {
         script {
             def containerPort = "8082"
@@ -146,20 +146,28 @@ pipeline {
             def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
             def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
 
-            withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-                sh """
-                sshpass -p "$SSH_PASS" ssh -tt -o StrictHostKeyChecking=no $SSH_USER@$VM_HOST <<EOF
-                    echo "Pulling latest Docker image: ${imageNameWithTag}"
-                    sudo docker pull ${imageNameWithTag}
+            withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
+                withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+                    withCredentials([usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh """
+                        sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no $SSH_USER@$VM_HOST <<EOF
+                            echo "Logging in to Docker Hub..."
+                            echo "$DOCKER_PASS" | sudo docker login -u "$DOCKER_USER" --password-stdin
 
-                    echo "Starting new container: ${newContainerName}"
-                    sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${imageNameWithTag}
-                EOF
-                """
+                            echo "Pulling latest Docker image: ${imageNameWithTag}"
+                            sudo docker pull ${imageNameWithTag}
+
+                            echo "Running new container: ${newContainerName}"
+                            sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${imageNameWithTag}
+                        EOF
+                        """
+                    }
+                }
             }
         }
     }
 }
+
 
 
     }
