@@ -122,7 +122,7 @@ pipeline {
                     def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
                     def internalAppPort = "8080"
 
-                    withCredentials([usernamePassword(credentialsId: 'azure-vm-login', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+                    withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
                         withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
 
                             // SSH into the VM and deploy
