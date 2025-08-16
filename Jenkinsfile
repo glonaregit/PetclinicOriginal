@@ -115,6 +115,29 @@ pipeline {
         //     }
         // }
 
+        stage('Delete the existing Docker Container running on 8082') {
+            steps {
+                 script {
+                   withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
+                        def containerPort = "8082"
+                        def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
+
+                        // Check for a running container on the same host port
+                        def existingContainerId = sh(
+                            script: "docker ps -q --filter 'publish=${containerPort}'", 
+                            returnStdout: true
+                        ).trim()
+
+                        if (existingContainerId) {
+                            echo "Stopping and removing existing container on port ${containerPort} with ID: ${existingContainerId}"
+                            sh "docker stop ${existingContainerId}"
+                            sh "docker rm ${existingContainerId}"
+                        }
+                   }
+               }  
+           }
+        }
+
         stage('Deploy To Docker Container on Azure VM') {
     steps {
         script {
@@ -128,14 +151,6 @@ pipeline {
                 sshpass -p "$SSH_PASS" ssh -tt -o StrictHostKeyChecking=no $SSH_USER@$VM_HOST <<EOF
                     echo "Pulling latest Docker image: ${imageNameWithTag}"
                     sudo docker pull ${imageNameWithTag}
-
-                    echo "Checking for existing container on port ${containerPort}..."
-                    container_id=\$(sudo docker ps --filter "status=running" --format '{{.ID}} {{.Ports}}' | grep ":${containerPort}->" | awk '{print \$1}')
-                    if [ -n "\$container_id" ]; then
-                        echo "Stopping and removing container using port ${containerPort}..."
-                        sudo docker stop \$container_id || true
-                        sudo docker rm -f \$container_id || true
-                    fi
 
                     echo "Starting new container: ${newContainerName}"
                     sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${imageNameWithTag}
