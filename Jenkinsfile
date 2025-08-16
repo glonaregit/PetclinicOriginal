@@ -9,6 +9,7 @@ pipeline {
         SCANNER_HOME = tool 'sonar-scanner'
         DOCKER_IMAGE_NAME = "gulshan126/pet-clinic2"
         DOCKER_IMAGE_TAG = "v${env.BUILD_NUMBER}"
+        VM_HOST = '74.249.249.219'
 
     }
     
@@ -75,6 +76,7 @@ pipeline {
                 sh "trivy image --no-progress --format json ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} > trivy-result.json"
                 archiveArtifacts artifacts: 'trivy-result.json', fingerprint: true
             }
+            
         }
 
         stage("Docker Push") {
@@ -87,30 +89,69 @@ pipeline {
             }
         }
 
-        stage('Deploy To Docker Container') {
+        // stage('Deploy To Docker Container') {
+        //     steps {
+        //         script {
+        //             withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
+        //                 def containerPort = "8082"
+        //                 def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
+
+        //                 // Check for a running container on the same host port
+        //                 def existingContainerId = sh(
+        //                     script: "docker ps -q --filter 'publish=${containerPort}'", 
+        //                     returnStdout: true
+        //                 ).trim()
+
+        //                 if (existingContainerId) {
+        //                     echo "Stopping and removing existing container on port ${containerPort} with ID: ${existingContainerId}"
+        //                     sh "docker stop ${existingContainerId}"
+        //                     sh "docker rm ${existingContainerId}"
+        //                 }
+
+        //                 // Deploy the new container
+        //                 sh "docker run -d --name ${newContainerName} -p ${containerPort}:8080 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+        //             }
+        //         }
+        //     }
+        // }
+
+        stage('Deploy To Docker Container on Azure VM') {
             steps {
                 script {
-                    withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
-                        def containerPort = "8082"
-                        def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
+                    def containerPort = "8082"
+                    def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
+                    def internalAppPort = "8080"
 
-                        // Check for a running container on the same host port
-                        def existingContainerId = sh(
-                            script: "docker ps -q --filter 'publish=${containerPort}'", 
-                            returnStdout: true
-                        ).trim()
+                    withCredentials([usernamePassword(credentialsId: 'azure-vm-login', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+                        withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
 
-                        if (existingContainerId) {
-                            echo "Stopping and removing existing container on port ${containerPort} with ID: ${existingContainerId}"
-                            sh "docker stop ${existingContainerId}"
-                            sh "docker rm ${existingContainerId}"
+                            // SSH into the VM and deploy
+                            sh """
+                                sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no \$SSH_USER@${VM_HOST} << EOF
+
+                                    echo "Logging in to Docker registry..."
+                                    docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD
+
+                                    echo "Pulling latest Docker image: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+                                    docker pull ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+
+                                    echo "Checking for existing container on port ${containerPort}..."
+                                    existing_container=\$(docker ps -q --filter "publish=${containerPort}")
+                                    if [ ! -z "\$existing_container" ]; then
+                                        echo "Stopping and removing existing container with ID: \$existing_container"
+                                        docker stop \$existing_container
+                                        docker rm \$existing_container
+                                    fi
+
+                                    echo "Running new container: ${newContainerName}"
+                                    docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                                EOF
+                            """
                         }
-
-                        // Deploy the new container
-                        sh "docker run -d --name ${newContainerName} -p ${containerPort}:8080 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
                     }
                 }
             }
         }
+
     }
 }
