@@ -173,6 +173,10 @@ END_SCRIPT
         // }
 
         stage('Deploy To Docker Container on Azure VM') {
+            when {
+                branch 'feature/*'
+                //changeRequest()
+            }
             steps {
                 script {
                     def containerPort = "8082"
