@@ -116,46 +116,40 @@ pipeline {
         // }
 
        stage('Deploy To Docker Container on Azure VM') {
-            steps {
-                script {
-                    def containerPort = "8082"
-                    def internalAppPort = "8080"
-                    def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
-                    def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+    steps {
+        script {
+            def containerPort = "8082"
+            def internalAppPort = "8080"
+            def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
+            def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
 
-                    withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-                        withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
+            withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+                withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
+                    sh '''
+                    sshpass -p "$SSH_PASS" ssh -tt -o StrictHostKeyChecking=no $SSH_USER@$VM_HOST <<'EOF'
+                        echo "Logging into Docker registry..."
+                        sudo docker login -u "$DOCKER_REGISTRY_USERNAME" -p "$DOCKER_REGISTRY_PASSWORD"
 
-                            def remoteScript = """
-                                echo "Pulling latest Docker image: ${imageNameWithTag}"
-                                sudo docker pull ${imageNameWithTag}
+                        echo "Pulling latest Docker image: ${imageNameWithTag}"
+                        sudo docker pull ${imageNameWithTag}
 
-                                echo "Checking for existing container on port ${containerPort}..."
-                                container_id=\$(sudo docker ps -q --filter "publish=${containerPort}")
-                                if [ -n "\$container_id" ]; then
-                                    echo "Stopping and removing existing container..."
-                                    sudo docker stop \$container_id
-                                    sudo docker rm \$container_id
-                                fi
+                        echo "Checking for existing container on port ${containerPort}..."
+                        container_id=$(sudo docker ps -aq --filter "publish=${containerPort}")
+                        if [ -n "$container_id" ]; then
+                            echo "Stopping and removing existing container..."
+                            sudo docker stop $container_id || true
+                            sudo docker rm -f $container_id || true
+                        fi
 
-                                echo "Starting new container: ${newContainerName}"
-                                sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${imageNameWithTag}
-                            """.stripIndent()
-
-                            sh """
-                                sshpass -p "$SSH_PASS" ssh -tt -o StrictHostKeyChecking=no $SSH_USER@$VM_HOST <<EOF
-        ${remoteScript}
-        EOF
-                            """
-                        }
-                    }
+                        echo "Starting new container: ${newContainerName}"
+                        sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${imageNameWithTag}
+                    EOF
+                    '''
                 }
             }
         }
-
-
-
-
+    }
+}
 
     }
 }
