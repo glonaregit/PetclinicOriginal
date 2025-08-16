@@ -130,7 +130,7 @@ pipeline {
                     sudo docker pull ${imageNameWithTag}
 
                     echo "Checking for existing container on port ${containerPort}..."
-                    container_id=\$(sudo docker ps --filter "publish=${containerPort}" --format '{{.ID}}')
+                    container_id=\$(sudo docker ps --filter "status=running" --format '{{.ID}} {{.Ports}}' | grep ":${containerPort}->" | awk '{print \$1}')
                     if [ -n "\$container_id" ]; then
                         echo "Stopping and removing container using port ${containerPort}..."
                         sudo docker stop \$container_id || true
@@ -145,6 +145,7 @@ pipeline {
         }
     }
 }
+
 
     }
 }
