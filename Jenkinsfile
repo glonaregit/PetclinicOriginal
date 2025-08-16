@@ -122,15 +122,11 @@ pipeline {
                     def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
                     def internalAppPort = "8080"
 
-                    withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+                    withCredentials([usernamePassword(credentialsId: 'azure-vm-login', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
                         withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
 
-                            // SSH into the VM and deploy
                             sh """
                                 sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no \$SSH_USER@${VM_HOST} << EOF
-
-                                    echo "Logging in to Docker registry..."
-                                    docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD
 
                                     echo "Pulling latest Docker image: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
                                     docker pull ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
@@ -152,6 +148,7 @@ pipeline {
                 }
             }
         }
+
 
     }
 }
