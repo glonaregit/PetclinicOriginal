@@ -125,11 +125,8 @@ pipeline {
                 withEnv(["SSHPASS=${SSH_PASS}"]) {
                     sh """
                     sshpass -e ssh -o StrictHostKeyChecking=no \$SSH_USER@\$VM_HOST <<'END_SCRIPT'
-                        
                         echo "Checking for existing container on port ${containerPort}..."
-                        
                         EXISTING_CONTAINER_ID=\$(sudo docker ps -q --filter "publish=${containerPort}")
-                        
                         if [ -n "\$EXISTING_CONTAINER_ID" ]; then
                             echo "Stopping and removing existing container on port ${containerPort} with ID: \$EXISTING_CONTAINER_ID"
                             sudo docker stop \$EXISTING_CONTAINER_ID
@@ -137,7 +134,7 @@ pipeline {
                         else
                             echo "No existing container found on port ${containerPort}."
                         fi
-                    END_SCRIPT
+END_SCRIPT
                     """
                 }
             }
