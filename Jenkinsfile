@@ -122,10 +122,9 @@ pipeline {
             def containerPort = "8082"
 
             withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-                // Change the environment variable name to SSHPASS
                 withEnv(["SSHPASS=${SSH_PASS}"]) {
                     sh """
-                    sshpass -e ssh -o StrictHostKeyChecking=no \$SSH_USER@\$VM_HOST <<'EOF'
+                        sshpass -e ssh -o StrictHostKeyChecking=no \$SSH_USER@\$VM_HOST < EOF_SCRIPT
                         echo "Checking for existing container on port ${containerPort}..."
                         EXISTING_CONTAINER_ID=\$(sudo docker ps -q --filter "publish=${containerPort}")
                         if [ -n "\$EXISTING_CONTAINER_ID" ]; then
@@ -135,14 +134,13 @@ pipeline {
                         else
                             echo "No existing container found on port ${containerPort}. Proceeding."
                         fi
-                    EOF
+                    EOF_SCRIPT
                     """
                 }
             }
         }
     }
 }
-
 
         stage('Deploy To Docker Container on Azure VM') {
             steps {
