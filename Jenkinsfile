@@ -134,7 +134,7 @@ pipeline {
                                 else
                                     echo "No existing container found on port ${containerPort}."
                                 fi
-        END_SCRIPT
+END_SCRIPT
                             """
                         }
                     }
@@ -193,7 +193,7 @@ pipeline {
 
                                     echo "Running new container: ${newContainerName}"
                                     sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${imageNameWithTag}
-        END_SCRIPT
+END_SCRIPT
                                 """
                             }
                         }
