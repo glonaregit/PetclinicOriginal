@@ -179,30 +179,40 @@ pipeline {
 
 
         stage('deploy to K8s') {
-            steps{
-                // when {
-                //         branch 'main'
-                //     }
+    steps {
+        withCredentials([
+            azureServicePrincipal(credentialsId: 'Azure_sp')
+        ]) {
+            sh '''
+                echo "Logging into Azure..."
+                az login --service-principal \
+                    -u $AZURE_CLIENT_ID \
+                    -p $AZURE_CLIENT_SECRET \
+                    --tenant $AZURE_TENANT_ID
 
-                        withCredentials([
-                            file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG_PATH')
-                        ]) {
-                            sh '''
-                                export KUBECONFIG=$KUBECONFIG_PATH
+                az account set --subscription $AZURE_SUBSCRIPTION_ID || true
 
-                                # Clone the manifest repo
-                                git clone --branch $MANIFEST_BRANCH $MANIFEST_REPO $MANIFEST_DIR
+                echo "Fetching fresh kubeconfig..."
+                export KUBECONFIG=$WORKSPACE/kubeconfig
+                az aks get-credentials \
+                    --resource-group devopsrg \
+                    --name aksjenkin \
+                    --file $KUBECONFIG \
+                    --overwrite-existing
 
-                                # Optionally, dynamically update image tag in manifest (if needed)
-                                sed -i "s#image: .*#image: gulshan126/pet-clinic2:v$BUILD_NUMBER#g" $MANIFEST_DIR/deployment.yml
+                # Clone manifest repo
+                git clone --branch $MANIFEST_BRANCH $MANIFEST_REPO $MANIFEST_DIR
 
-                                # Deploy to AKS
-                                kubectl apply -f $MANIFEST_DIR/deployment.yml
-                            '''
+                # Patch image
+                sed -i "s#image: .*#image: gulshan126/pet-clinic2:v$BUILD_NUMBER#g" $MANIFEST_DIR/deployment.yml
 
-                        }
-            }
+                # Deploy
+                kubectl --kubeconfig=$KUBECONFIG apply -f $MANIFEST_DIR/deployment.yml
+            '''
         }
+    }
+}
+
        
     }
 }
