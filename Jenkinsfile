@@ -163,7 +163,7 @@ pipeline {
                 echo "Getting AKS credentials into a temp kubeconfig..."
                 export KUBECONFIG=$WORKSPACE/kubeconfig
                 echo "Getting AKS credentials..."
-                az aks get-credentials --resource-group devopsrg --name aksjenkin --overwrite-existing
+                az aks get-credentials --resource-group devopsrg --name aksjenkin --file $KUBECONFIG --overwrite-existing
 
                 echo "Creating DockerHub secret in AKS..."
                 kubectl --kubeconfig=$KUBECONFIG create secret docker-registry dockercred \
