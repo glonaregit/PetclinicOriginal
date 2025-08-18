@@ -146,21 +146,25 @@ pipeline {
 
         stage('Create DockerHub Pull Secret in Kubernetes') {
     steps {
-        withCredentials([
-            usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-        ]) {
-            sh '''
-                # Use az CLI to get fresh credentials for the AKS cluster
-                az aks get-credentials --resource-group devopsrg --name aksjenkin --overwrite-existing
+        // Use the Azure Service Principal plugin to authenticate
+        azureServicePrincipal('Azure_sp') { 
+            withCredentials([
+                usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+            ]) {
+                sh '''
+                    # The Azure credentials are now available in the environment.
+                    # This command will automatically use them.
+                    az aks get-credentials --resource-group devopsrg --name aksjenkin --overwrite-existing
 
-                # Use kubectl to create the Docker secret in your AKS cluster
-                kubectl create secret docker-registry dockercred \
-                    --docker-username=$DOCKER_USER \
-                    --docker-password=$DOCKER_PASS \
-                    --docker-email=admin@example.com \
-                    --namespace=default \
-                    --dry-run=client -o yaml | kubectl apply -f -
-            '''
+                    # Use kubectl to create the Docker secret in your AKS cluster.
+                    kubectl create secret docker-registry dockercred \\
+                        --docker-username=$DOCKER_USER \\
+                        --docker-password=$DOCKER_PASS \\
+                        --docker-email=admin@example.com \\
+                        --namespace=default \\
+                        --dry-run=client -o yaml | kubectl apply -f -
+                '''
+            }
         }
     }
 }
