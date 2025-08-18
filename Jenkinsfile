@@ -146,28 +146,35 @@ pipeline {
 
         stage('Create DockerHub Pull Secret in Kubernetes') {
     steps {
-        // Use the Azure Service Principal plugin to authenticate
-        azureServicePrincipal(credentialsId: 'Azure_sp') { 
-            withCredentials([
-                usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-            ]) {
-                sh '''
-                    # The Azure credentials are now available in the environment.
-                    # This command will automatically use them.
-                    az aks get-credentials --resource-group devopsrg --name aksjenkin --overwrite-existing
+        withCredentials([
+            azureServicePrincipal(credentialsId: 'Azure_sp'),
+            usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+        ]) {
+            sh '''
+                echo "Logging into Azure..."
+                az login --service-principal \
+                    -u $AZURE_CLIENT_ID \
+                    -p $AZURE_CLIENT_SECRET \
+                    --tenant $AZURE_TENANT_ID
 
-                    # Use kubectl to create the Docker secret in your AKS cluster.
-                    kubectl create secret docker-registry dockercred \\
-                        --docker-username=$DOCKER_USER \\
-                        --docker-password=$DOCKER_PASS \\
-                        --docker-email=admin@example.com \\
-                        --namespace=default \\
-                        --dry-run=client -o yaml | kubectl apply -f -
-                '''
-            }
+                # (Optional) set subscription explicitly
+                az account set --subscription $AZURE_SUBSCRIPTION_ID || true
+
+                echo "Getting AKS credentials..."
+                az aks get-credentials --resource-group devopsrg --name aksjenkin --overwrite-existing
+
+                echo "Creating DockerHub secret in AKS..."
+                kubectl create secret docker-registry dockercred \
+                    --docker-username=$DOCKER_USER \
+                    --docker-password=$DOCKER_PASS \
+                    --docker-email=admin@example.com \
+                    --namespace=default \
+                    --dry-run=client -o yaml | kubectl apply -f -
+            '''
         }
     }
 }
+
 
         stage('deploy to K8s') {
             steps{
