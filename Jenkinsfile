@@ -212,6 +212,7 @@ pipeline {
                 kubectl --kubeconfig=$KUBECONFIG apply -f $MANIFEST_DIR/deployment.yml
             '''
         }
+        
     }
 }
 
