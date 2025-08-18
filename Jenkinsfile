@@ -10,6 +10,7 @@ pipeline {
         DOCKER_IMAGE_NAME = "gulshan126/pet-clinic2"
         DOCKER_IMAGE_TAG = "v${env.BUILD_NUMBER}"
         VM_HOST = '74.249.249.219'
+        CONTAINER_PORT = "8082"
 
     }
     
@@ -116,31 +117,42 @@ pipeline {
         // }
 
         // 
-       stage('Delete Docker Container') {
-            steps {
-                script {
-                    def containerPort = "8082"
+//        stage('Delete Docker Container') {
+//             steps {
+//                 script {
+//                     def containerPort = "8082"
                     
-                    withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-                        withEnv(["SSHPASS=${SSH_PASS}"]) {
-                            sh """
-                            sshpass -e ssh -o StrictHostKeyChecking=no \$SSH_USER@\$VM_HOST <<'END_SCRIPT'
-                                echo "Checking for existing container on port ${containerPort}..."
-                                EXISTING_CONTAINER_ID=\$(sudo docker ps -q --filter "publish=${containerPort}")
-                                if [ -n "\$EXISTING_CONTAINER_ID" ]; then
-                                    echo "Stopping and removing existing container on port ${containerPort} with ID: \$EXISTING_CONTAINER_ID"
-                                    sudo docker stop \$EXISTING_CONTAINER_ID
-                                    sudo docker rm \$EXISTING_CONTAINER_ID
-                                else
-                                    echo "No existing container found on port ${containerPort}."
-                                fi
-END_SCRIPT
-                            """
+//                     withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+//                         withEnv(["SSHPASS=${SSH_PASS}"]) {
+//                             sh """
+//                             sshpass -e ssh -o StrictHostKeyChecking=no \$SSH_USER@\$VM_HOST <<'END_SCRIPT'
+//                                 echo "Checking for existing container on port ${containerPort}..."
+//                                 EXISTING_CONTAINER_ID=\$(sudo docker ps -q --filter "publish=${containerPort}")
+//                                 if [ -n "\$EXISTING_CONTAINER_ID" ]; then
+//                                     echo "Stopping and removing existing container on port ${containerPort} with ID: \$EXISTING_CONTAINER_ID"
+//                                     sudo docker stop \$EXISTING_CONTAINER_ID
+//                                     sudo docker rm \$EXISTING_CONTAINER_ID
+//                                 else
+//                                     echo "No existing container found on port ${containerPort}."
+//                                 fi
+// END_SCRIPT
+//                             """
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+
+            stage('Delete docker container using shell script'){
+                steps {
+                    script {
+                        withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+                            sh "./delete_docker_container.sh"
                         }
                     }
                 }
+                
             }
-        }
 
         // stage('Deploy To Docker Container on Azure VM') {
         //     steps {
