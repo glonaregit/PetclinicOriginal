@@ -200,6 +200,8 @@ pipeline {
                     --file $KUBECONFIG \
                     --overwrite-existing
 
+                echo "Cloning manifest repo..."
+                rm -rf $MANIFEST_DIR
                 # Clone manifest repo
                 git clone --branch $MANIFEST_BRANCH $MANIFEST_REPO $MANIFEST_DIR
 
