@@ -122,27 +122,48 @@ pipeline {
             }
         }
 
+        // stage('Create DockerHub Pull Secret in Kubernetes') {
+        //     steps {
+        //         withCredentials([
+        //             file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG_FILE'),
+        //             usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+        //         ]) {
+        //             sh '''
+
+        //                 mkdir -p ~/.kube
+        //                 cp $KUBECONFIG_FILE ~/.kube/config
+
+        //                 kubectl create secret docker-registry dockercred \
+        //                 --docker-username=$DOCKER_USER \
+        //                 --docker-password=$DOCKER_PASS \
+        //                 --docker-email=admin@example.com \
+        //                 --namespace=default \
+        //                 --dry-run=client -o yaml | kubectl apply -f -
+        //             '''
+        //         }
+        //     }
+        // }
+
         stage('Create DockerHub Pull Secret in Kubernetes') {
-            steps {
-                withCredentials([
-                    file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG_FILE'),
-                    usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-                ]) {
-                    sh '''
+    steps {
+        withCredentials([
+            usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+        ]) {
+            sh '''
+                # Use az CLI to get fresh credentials for the AKS cluster
+                az aks get-credentials --resource-group devopsrg --name aksjenkin --overwrite-existing
 
-                        mkdir -p ~/.kube
-                        cp $KUBECONFIG_FILE ~/.kube/config
-
-                        kubectl create secret docker-registry dockercred \
-                        --docker-username=$DOCKER_USER \
-                        --docker-password=$DOCKER_PASS \
-                        --docker-email=admin@example.com \
-                        --namespace=default \
-                        --dry-run=client -o yaml | kubectl apply -f -
-                    '''
-                }
-            }
+                # Use kubectl to create the Docker secret in your AKS cluster
+                kubectl create secret docker-registry dockercred \
+                    --docker-username=$DOCKER_USER \
+                    --docker-password=$DOCKER_PASS \
+                    --docker-email=admin@example.com \
+                    --namespace=default \
+                    --dry-run=client -o yaml | kubectl apply -f -
+            '''
         }
+    }
+}
 
         stage('deploy to K8s') {
             steps{
