@@ -12,6 +12,10 @@ pipeline {
         VM_HOST = '74.249.249.219'
         CONTAINER_PORT = "8082"
         INTERNAL_APP_PORT = "8080"
+        MANIFEST_REPO = "https://github.com/glonaregit/kubernetes.git"
+        MANIFEST_BRANCH = "main"  // or another branch
+        MANIFEST_DIR = "manifests"
+
 
     }
     
@@ -91,151 +95,75 @@ pipeline {
             }
         }
 
-        // stage('Deploy To Docker Container') {
-        //     steps {
-        //         script {
-        //             withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
-        //                 def containerPort = "8082"
-        //                 def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
-
-        //                 // Check for a running container on the same host port
-        //                 def existingContainerId = sh(
-        //                     script: "docker ps -q --filter 'publish=${containerPort}'", 
-        //                     returnStdout: true
-        //                 ).trim()
-
-        //                 if (existingContainerId) {
-        //                     echo "Stopping and removing existing container on port ${containerPort} with ID: ${existingContainerId}"
-        //                     sh "docker stop ${existingContainerId}"
-        //                     sh "docker rm ${existingContainerId}"
-        //                 }
-
-        //                 // Deploy the new container
-        //                 sh "docker run -d --name ${newContainerName} -p ${containerPort}:8080 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
-        //             }
-        //         }
-        //     }
-        // }
-
-        // 
-//        stage('Delete Docker Container') {
-//             steps {
-//                 script {
-//                     def containerPort = "8082"
-                    
-//                     withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-//                         withEnv(["SSHPASS=${SSH_PASS}"]) {
-//                             sh """
-//                             sshpass -e ssh -o StrictHostKeyChecking=no \$SSH_USER@\$VM_HOST <<'END_SCRIPT'
-//                                 echo "Checking for existing container on port ${containerPort}..."
-//                                 EXISTING_CONTAINER_ID=\$(sudo docker ps -q --filter "publish=${containerPort}")
-//                                 if [ -n "\$EXISTING_CONTAINER_ID" ]; then
-//                                     echo "Stopping and removing existing container on port ${containerPort} with ID: \$EXISTING_CONTAINER_ID"
-//                                     sudo docker stop \$EXISTING_CONTAINER_ID
-//                                     sudo docker rm \$EXISTING_CONTAINER_ID
-//                                 else
-//                                     echo "No existing container found on port ${containerPort}."
-//                                 fi
-// END_SCRIPT
-//                             """
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-
-            stage('Delete docker container using shell script'){
-                steps {
-                    script {
-                        withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-                             sh "bash delete_docker_container.sh"
-                        }
+        stage('Delete docker container using shell script'){
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+                            sh "bash delete_docker_container.sh"
                     }
                 }
-                
             }
+            
+        }
 
-        // stage('Deploy To Docker Container on Azure VM') {
-        //     steps {
-        //         script {
-        //             def containerPort = "8082"
-        //             def internalAppPort = "8080"
-        //             def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
-        //             def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
-
-        //             withDockerRegistry(credentialsId: 'dockercred', toolName: 'docker') {
-        //                 withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-        //                     withCredentials([usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-        //                         sh """
-        //                         sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no $SSH_USER@$VM_HOST <<'EOF'
-        //                             echo "Logging in to Docker Hub..."
-        //                             echo "$DOCKER_PASS" | sudo docker login -u "$DOCKER_USER" --password-stdin
-
-        //                             echo "Pulling latest Docker image: ${imageNameWithTag}"
-        //                             sudo docker pull ${imageNameWithTag}
-
-        //                             echo "Running new container: ${newContainerName}"
-        //                             sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${imageNameWithTag}
-        //                         EOF
-        //                         """
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
-
-//         stage('Deploy To Docker Container on Azure VM') {
-//             when {
-//                 branch 'feature/*'
-//                 //changeRequest()
-//             }
-//             steps {
-//                 script {
-//                     def containerPort = "8082"
-//                     def internalAppPort = "8080"
-//                     def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
-//                     def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
-
-//                     withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-//                         withCredentials([usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-//                             withEnv(["SSHPASS=${SSH_PASS}"]) {
-//                                 sh """
-//                                 sshpass -e ssh -o StrictHostKeyChecking=no \$SSH_USER@\$VM_HOST <<'END_SCRIPT'
-//                                     echo "Logging in to Docker Hub..."
-//                                     echo "$DOCKER_PASS" | sudo docker login -u "$DOCKER_USER" --password-stdin
-
-//                                     echo "Pulling latest Docker image: ${imageNameWithTag}"
-//                                     sudo docker pull ${imageNameWithTag}
-
-//                                     echo "Running new container: ${newContainerName}"
-//                                     sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${imageNameWithTag}
-// END_SCRIPT
-//                                 """
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-
-            stage('Deploy To Docker Container on Azure VM') {
-                when {
-                    branch 'feature/*'
+        stage('Deploy To Docker Container on Azure VM') {
+            when {
+                branch 'feature/*'
+            }
+            steps {
+                script {
+                    withCredentials([
+                        usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS'),
+                        usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+                    ]) {
+                        sh "bash deploy_docker_container.sh"
+                    }
                 }
-                steps {
-                    script {
+            }
+        }
+
+        stage('Create DockerHub Pull Secret in Kubernetes') {
+            steps {
+                withCredentials([
+                    usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+                ]) {
+                    sh '''
+                        kubectl create secret docker-registry dockercred \
+                        --docker-username=$DOCKER_USER \
+                        --docker-password=$DOCKER_PASS \
+                        --docker-email=admin@example.com \
+                        --namespace=default \
+                        --dry-run=client -o yaml | kubectl apply -f -
+                    '''
+                }
+            }
+        }
+
+        stage{
+            steps{
+                // when {
+                //         branch 'main'
+                //     }
+
                         withCredentials([
-                            usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS'),
-                            usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+                            file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG_PATH')
                         ]) {
-                            sh "bash deploy_docker_container.sh"
+                            sh '''
+                                export KUBECONFIG=$KUBECONFIG_PATH
+
+                                # Clone the manifest repo
+                                git clone --branch $MANIFEST_BRANCH $MANIFEST_REPO $MANIFEST_DIR
+
+                                # Optionally, dynamically update image tag in manifest (if needed)
+                                sed -i "s#image: .*#image: gulshan126/pet-clinic2:v$BUILD_NUMBER#g" $MANIFEST_DIR/deployment.yml
+
+                                # Deploy to AKS
+                                kubectl apply -f $MANIFEST_DIR/deployment.yml
+                            '''
+
                         }
-                    }
-                }
             }
-
-
-        
+        }
+       
     }
 }
