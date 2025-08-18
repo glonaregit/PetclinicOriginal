@@ -125,9 +125,14 @@ pipeline {
         stage('Create DockerHub Pull Secret in Kubernetes') {
             steps {
                 withCredentials([
+                    file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG_FILE'),
                     usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
                 ]) {
                     sh '''
+
+                        mkdir -p ~/.kube
+                        cp $KUBECONFIG_FILE ~/.kube/config
+
                         kubectl create secret docker-registry dockercred \
                         --docker-username=$DOCKER_USER \
                         --docker-password=$DOCKER_PASS \
