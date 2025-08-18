@@ -139,7 +139,7 @@ pipeline {
             }
         }
 
-        stage{
+        stage('deploy to K8s') {
             steps{
                 // when {
                 //         branch 'main'
