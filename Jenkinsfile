@@ -160,16 +160,18 @@ pipeline {
                 # (Optional) set subscription explicitly
                 az account set --subscription $AZURE_SUBSCRIPTION_ID || true
 
+                echo "Getting AKS credentials into a temp kubeconfig..."
+                export KUBECONFIG=$WORKSPACE/kubeconfig
                 echo "Getting AKS credentials..."
                 az aks get-credentials --resource-group devopsrg --name aksjenkin --overwrite-existing
 
                 echo "Creating DockerHub secret in AKS..."
-                kubectl create secret docker-registry dockercred \
-                    --docker-username=$DOCKER_USER \
-                    --docker-password=$DOCKER_PASS \
-                    --docker-email=admin@example.com \
-                    --namespace=default \
-                    --dry-run=client -o yaml | kubectl apply -f -
+                kubectl --kubeconfig=$KUBECONFIG create secret docker-registry dockercred \
+                --docker-username=$DOCKER_USER \
+                --docker-password=$DOCKER_PASS \
+                --docker-email=admin@example.com \
+                --namespace=default \
+                --dry-run=client -o yaml | kubectl apply --kubeconfig=$KUBECONFIG -f -
             '''
         }
     }
