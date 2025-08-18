@@ -174,7 +174,7 @@ END_SCRIPT
 
         stage('Deploy To Docker Container on Azure VM') {
             when {
-                branch 'main'
+                branch 'feature/*'
                 //changeRequest()
             }
             steps {
