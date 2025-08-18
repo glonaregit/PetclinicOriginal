@@ -147,7 +147,7 @@ pipeline {
                 steps {
                     script {
                         withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-                            sh "./delete_docker_container.sh"
+                             sh "./delete_docker_container.sh"
                         }
                     }
                 }
