@@ -147,7 +147,7 @@ pipeline {
         stage('Create DockerHub Pull Secret in Kubernetes') {
     steps {
         // Use the Azure Service Principal plugin to authenticate
-        azureServicePrincipal('Azure_sp') { 
+        azureServicePrincipal(credentialsId: 'Azure_sp') { 
             withCredentials([
                 usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
             ]) {
