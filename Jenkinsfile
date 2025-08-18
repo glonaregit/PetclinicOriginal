@@ -11,6 +11,7 @@ pipeline {
         DOCKER_IMAGE_TAG = "v${env.BUILD_NUMBER}"
         VM_HOST = '74.249.249.219'
         CONTAINER_PORT = "8082"
+        INTERNAL_APP_PORT = "8080"
 
     }
     
@@ -184,39 +185,56 @@ pipeline {
         //     }
         // }
 
-        stage('Deploy To Docker Container on Azure VM') {
-            when {
-                branch 'feature/*'
-                //changeRequest()
-            }
-            steps {
-                script {
-                    def containerPort = "8082"
-                    def internalAppPort = "8080"
-                    def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
-                    def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+//         stage('Deploy To Docker Container on Azure VM') {
+//             when {
+//                 branch 'feature/*'
+//                 //changeRequest()
+//             }
+//             steps {
+//                 script {
+//                     def containerPort = "8082"
+//                     def internalAppPort = "8080"
+//                     def newContainerName = "petclinic-${DOCKER_IMAGE_TAG}"
+//                     def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
 
-                    withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-                        withCredentials([usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                            withEnv(["SSHPASS=${SSH_PASS}"]) {
-                                sh """
-                                sshpass -e ssh -o StrictHostKeyChecking=no \$SSH_USER@\$VM_HOST <<'END_SCRIPT'
-                                    echo "Logging in to Docker Hub..."
-                                    echo "$DOCKER_PASS" | sudo docker login -u "$DOCKER_USER" --password-stdin
+//                     withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
+//                         withCredentials([usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+//                             withEnv(["SSHPASS=${SSH_PASS}"]) {
+//                                 sh """
+//                                 sshpass -e ssh -o StrictHostKeyChecking=no \$SSH_USER@\$VM_HOST <<'END_SCRIPT'
+//                                     echo "Logging in to Docker Hub..."
+//                                     echo "$DOCKER_PASS" | sudo docker login -u "$DOCKER_USER" --password-stdin
 
-                                    echo "Pulling latest Docker image: ${imageNameWithTag}"
-                                    sudo docker pull ${imageNameWithTag}
+//                                     echo "Pulling latest Docker image: ${imageNameWithTag}"
+//                                     sudo docker pull ${imageNameWithTag}
 
-                                    echo "Running new container: ${newContainerName}"
-                                    sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${imageNameWithTag}
-END_SCRIPT
-                                """
-                            }
+//                                     echo "Running new container: ${newContainerName}"
+//                                     sudo docker run -d --name ${newContainerName} -p ${containerPort}:${internalAppPort} ${imageNameWithTag}
+// END_SCRIPT
+//                                 """
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+
+            stage('Deploy To Docker Container on Azure VM') {
+                when {
+                    branch 'feature/*'
+                }
+                steps {
+                    script {
+                        withCredentials([
+                            usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS'),
+                            usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+                        ]) {
+                            sh "bash deploy_docker_container.sh"
                         }
                     }
                 }
             }
-        }
+
 
         
     }
