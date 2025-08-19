@@ -80,7 +80,7 @@ pipeline {
                    sh """
                 mkdir -p ci/templates
                 curl -sSL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl -o ci/templates/html.tpl
-                # JSON output (for archiving)
+                
                 trivy image --no-progress --format json -o trivy-result.json ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                 
                 # HTML output (for human-readable report)
