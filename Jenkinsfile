@@ -77,10 +77,15 @@ pipeline {
 
         stage("Trivy Image Scan") {
             steps {
-                sh "trivy image --no-progress --format json ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} > trivy-result.json"
-                archiveArtifacts artifacts: 'trivy-result.json', fingerprint: true
-                npx trivy-to-html -i trivy-result.json -o trivy-report.html
-                ls -lh trivy-report.html
+                   sh """
+                # JSON output (for archiving)
+                trivy image --no-progress --format json -o trivy-result.json ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+
+                # HTML output (for human-readable report)
+                trivy image --no-progress --format template --template "@contrib/html.tpl" -o trivy-report.html ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+
+                ls -lh trivy-result.json trivy-report.html
+                """
 
                 publishHTML(target: [allowMissing: false, alwaysLinkToLastBuild: true, keepAll: true, reportDir: '.', reportFiles: 'trivy-report.html', reportName: 'Trivy Image Scan Report'])
             }
