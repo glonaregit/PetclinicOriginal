@@ -4,24 +4,23 @@ pipeline {
     tools {
         maven 'maven3'
     }
-    
+
     environment {
-        SCANNER_HOME = tool 'sonar-scanner'
+        SCANNER_HOME    = tool 'sonar-scanner'
         DOCKER_IMAGE_NAME = "gulshan126/pet-clinic2"
-        DOCKER_IMAGE_TAG = "v${env.BUILD_NUMBER}"
-        VM_HOST = '74.249.249.219'
-        CONTAINER_PORT = "8082"
+        DOCKER_IMAGE_TAG  = "v${env.BUILD_NUMBER}"
+        VM_HOST         = '74.249.249.219'
+        CONTAINER_PORT  = "8082"
         INTERNAL_APP_PORT = "8080"
-        MANIFEST_REPO = "https://github.com/glonaregit/kubernetes.git"
-        MANIFEST_BRANCH = "main"  // or another branch
-        MANIFEST_DIR = "manifests"
-
-
+        MANIFEST_REPO   = "https://github.com/glonaregit/kubernetes.git"
+        MANIFEST_DIR    = "manifests"
     }
-    
+
     stages {
-        
-        stage("Maven Build and Test") {
+        /* -------------------------
+         *  CONTINUOUS INTEGRATION
+         * ------------------------- */
+        stage("Build & Unit Tests") {
             steps {
                 sh "mvn clean install"
             }
@@ -37,11 +36,11 @@ pipeline {
                         -Dsonar.projectKey=Petclinic1
                     '''
                 }
-                    waitForQualityGate abortPipeline: true
+                waitForQualityGate abortPipeline: true
             }
         }
-        
-        stage('OWASP Dependency Check') {
+
+        stage("OWASP Dependency Check") {
             steps {
                 dependencyCheck additionalArguments: '''
                     --scan 'target/' 
@@ -50,11 +49,10 @@ pipeline {
                     --disableYarnAudit \
                     --prettyPrint
                 ''', odcInstallation: 'owasp'
-                //junit allowEmptyResults: true, stdioRetention: '', testResults: 'dependency-check-junit.xml'
             }
         }
-        
-        stage('Publish OWASP Dependency Report') {
+
+        stage("Publish OWASP Dependency Report") {
             steps {
                 publishHTML(target: [
                     allowMissing: false,
@@ -66,7 +64,7 @@ pipeline {
                 ])
             }
         }
-        
+
         stage("Docker Build") {
             steps {
                 script {
@@ -76,15 +74,17 @@ pipeline {
                 }
             }
         }
-        
-        stage("TRIVY") {
+
+        stage("Trivy Image Scan") {
             steps {
                 sh "trivy image --no-progress --format json ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} > trivy-result.json"
                 archiveArtifacts artifacts: 'trivy-result.json', fingerprint: true
             }
-            
         }
 
+        /* -------------------------
+         *  CONTINUOUS DELIVERY
+         * ------------------------- */
         stage("Docker Push") {
             steps {
                 script {
@@ -95,127 +95,96 @@ pipeline {
             }
         }
 
-        stage('Delete docker container using shell script'){
+        stage("Create DockerHub Pull Secret in AKS") {
             steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')]) {
-                            sh "bash delete_docker_container.sh"
-                    }
+                withCredentials([
+                    azureServicePrincipal(credentialsId: 'Azure_sp'),
+                    usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
+                ]) {
+                    sh '''
+                        az login --service-principal \
+                            -u $AZURE_CLIENT_ID \
+                            -p $AZURE_CLIENT_SECRET \
+                            --tenant $AZURE_TENANT_ID
+                        az account set --subscription $AZURE_SUBSCRIPTION_ID || true
+                        export KUBECONFIG=$WORKSPACE/kubeconfig
+                        az aks get-credentials --resource-group devopsrg --name aksjenkin --file $KUBECONFIG --overwrite-existing
+
+                        kubectl --kubeconfig=$KUBECONFIG create secret docker-registry dockercred \
+                        --docker-username=$DOCKER_USER \
+                        --docker-password=$DOCKER_PASS \
+                        --docker-email=admin@example.com \
+                        --namespace=default \
+                        --dry-run=client -o yaml | kubectl apply --kubeconfig=$KUBECONFIG -f -
+                    '''
                 }
             }
-            
         }
 
-        stage('Deploy To Docker Container on Azure VM') {
-            when {
-                branch 'feature/*'
-            }
+        /* -------------------------
+         *  CONTINUOUS DEPLOYMENT
+         * ------------------------- */
+        stage("Deploy to Test VM (Feature Branches)") {
+            when { branch pattern: "feature/.*", comparator: "REGEXP" }
             steps {
                 script {
                     withCredentials([
                         usernamePassword(credentialsId: 'ubntuvm_cred', usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS'),
                         usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
                     ]) {
+                        sh "bash delete_docker_container.sh"
                         sh "bash deploy_docker_container.sh"
                     }
                 }
             }
         }
 
-        // stage('Create DockerHub Pull Secret in Kubernetes') {
-        //     steps {
-        //         withCredentials([
-        //             file(credentialsId: 'aks-kubeconfig', variable: 'KUBECONFIG_FILE'),
-        //             usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-        //         ]) {
-        //             sh '''
+        stage("Deploy to Staging AKS (Develop Branch)") {
+            when { branch 'develop' }
+            steps {
+                script {
+                    withCredentials([azureServicePrincipal(credentialsId: 'Azure_sp')]) {
+                        sh '''
+                            az login --service-principal \
+                                -u $AZURE_CLIENT_ID \
+                                -p $AZURE_CLIENT_SECRET \
+                                --tenant $AZURE_TENANT_ID
+                            az account set --subscription $AZURE_SUBSCRIPTION_ID || true
+                            export KUBECONFIG=$WORKSPACE/kubeconfig
+                            az aks get-credentials --resource-group devopsrg --name aksjenkin --file $KUBECONFIG --overwrite-existing
 
-        //                 mkdir -p ~/.kube
-        //                 cp $KUBECONFIG_FILE ~/.kube/config
-
-        //                 kubectl create secret docker-registry dockercred \
-        //                 --docker-username=$DOCKER_USER \
-        //                 --docker-password=$DOCKER_PASS \
-        //                 --docker-email=admin@example.com \
-        //                 --namespace=default \
-        //                 --dry-run=client -o yaml | kubectl apply -f -
-        //             '''
-        //         }
-        //     }
-        // }
-
-        stage('Create DockerHub Pull Secret in Kubernetes') {
-    steps {
-        withCredentials([
-            azureServicePrincipal(credentialsId: 'Azure_sp'),
-            usernamePassword(credentialsId: 'dockercred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')
-        ]) {
-            sh '''
-                echo "Logging into Azure..."
-                az login --service-principal \
-                    -u $AZURE_CLIENT_ID \
-                    -p $AZURE_CLIENT_SECRET \
-                    --tenant $AZURE_TENANT_ID
-
-                # (Optional) set subscription explicitly
-                az account set --subscription $AZURE_SUBSCRIPTION_ID || true
-
-                echo "Getting AKS credentials into a temp kubeconfig..."
-                export KUBECONFIG=$WORKSPACE/kubeconfig
-                echo "Getting AKS credentials..."
-                az aks get-credentials --resource-group devopsrg --name aksjenkin --file $KUBECONFIG --overwrite-existing
-
-                echo "Creating DockerHub secret in AKS..."
-                kubectl --kubeconfig=$KUBECONFIG create secret docker-registry dockercred \
-                --docker-username=$DOCKER_USER \
-                --docker-password=$DOCKER_PASS \
-                --docker-email=admin@example.com \
-                --namespace=default \
-                --dry-run=client -o yaml | kubectl apply --kubeconfig=$KUBECONFIG -f -
-            '''
+                            rm -rf $MANIFEST_DIR
+                            git clone --branch staging $MANIFEST_REPO $MANIFEST_DIR
+                            sed -i "s#image: .*#image: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}#g" $MANIFEST_DIR/deployment.yml
+                            kubectl --kubeconfig=$KUBECONFIG apply -f $MANIFEST_DIR/deployment.yml
+                        '''
+                    }
+                }
+            }
         }
-    }
-}
 
+        stage("Deploy to Prod AKS (Main Branch)") {
+            when { branch 'main' }
+            steps {
+                script {
+                    withCredentials([azureServicePrincipal(credentialsId: 'Azure_sp')]) {
+                        sh '''
+                            az login --service-principal \
+                                -u $AZURE_CLIENT_ID \
+                                -p $AZURE_CLIENT_SECRET \
+                                --tenant $AZURE_TENANT_ID
+                            az account set --subscription $AZURE_SUBSCRIPTION_ID || true
+                            export KUBECONFIG=$WORKSPACE/kubeconfig
+                            az aks get-credentials --resource-group devopsrg --name aksjenkin --file $KUBECONFIG --overwrite-existing
 
-        stage('deploy to K8s') {
-    steps {
-        withCredentials([
-            azureServicePrincipal(credentialsId: 'Azure_sp')
-        ]) {
-            sh '''
-                echo "Logging into Azure..."
-                az login --service-principal \
-                    -u $AZURE_CLIENT_ID \
-                    -p $AZURE_CLIENT_SECRET \
-                    --tenant $AZURE_TENANT_ID
-
-                az account set --subscription $AZURE_SUBSCRIPTION_ID || true
-
-                echo "Fetching fresh kubeconfig..."
-                export KUBECONFIG=$WORKSPACE/kubeconfig
-                az aks get-credentials \
-                    --resource-group devopsrg \
-                    --name aksjenkin \
-                    --file $KUBECONFIG \
-                    --overwrite-existing
-
-                echo "Cloning manifest repo..."
-                rm -rf $MANIFEST_DIR
-                # Clone manifest repo
-                git clone --branch $MANIFEST_BRANCH $MANIFEST_REPO $MANIFEST_DIR
-
-                # Patch image
-                sed -i "s#image: .*#image: gulshan126/pet-clinic2:v$BUILD_NUMBER#g" $MANIFEST_DIR/deployment.yml
-
-                # Deploy
-                kubectl --kubeconfig=$KUBECONFIG apply -f $MANIFEST_DIR/deployment.yml
-            '''
+                            rm -rf $MANIFEST_DIR
+                            git clone --branch main $MANIFEST_REPO $MANIFEST_DIR
+                            sed -i "s#image: .*#image: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}#g" $MANIFEST_DIR/deployment.yml
+                            kubectl --kubeconfig=$KUBECONFIG apply -f $MANIFEST_DIR/deployment.yml
+                        '''
+                    }
+                }
+            }
         }
-        
-    }
-}
-
-       
     }
 }
