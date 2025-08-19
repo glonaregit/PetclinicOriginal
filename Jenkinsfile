@@ -154,7 +154,7 @@ pipeline {
                             az aks get-credentials --resource-group devopsrg --name aksjenkin --file $KUBECONFIG --overwrite-existing
 
                             rm -rf $MANIFEST_DIR
-                            git clone --branch staging $MANIFEST_REPO $MANIFEST_DIR
+                            git clone --branch main $MANIFEST_REPO $MANIFEST_DIR
                             sed -i "s#image: .*#image: ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}#g" $MANIFEST_DIR/deployment.yml
                             kubectl --kubeconfig=$KUBECONFIG apply -f $MANIFEST_DIR/deployment.yml
                         '''
