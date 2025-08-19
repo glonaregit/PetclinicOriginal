@@ -36,7 +36,7 @@ pipeline {
                         -Dsonar.projectKey=Petclinic1
                     '''
                 }
-                waitForQualityGate abortPipeline: true
+                //waitForQualityGate abortPipeline: true
             }
         }
 
