@@ -80,12 +80,12 @@ pipeline {
                    sh """
                 # JSON output (for archiving)
                 trivy image --no-progress --format json -o trivy-result.json ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
-
                 # HTML output (for human-readable report)
-                trivy image --no-progress --format template --template "@contrib/html.tpl" -o trivy-report.html ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                trivy image --no-progress --format template --template "@ci/templates/html.tpl" -o trivy-report.html ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
 
                 ls -lh trivy-result.json trivy-report.html
                 """
+                archiveArtifacts artifacts: 'trivy-result.json', fingerprint: true
 
                 publishHTML(target: [allowMissing: false, alwaysLinkToLastBuild: true, keepAll: true, reportDir: '.', reportFiles: 'trivy-report.html', reportName: 'Trivy Image Scan Report'])
             }
