@@ -79,6 +79,8 @@ pipeline {
             steps {
                 sh "trivy image --no-progress --format json ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} > trivy-result.json"
                 archiveArtifacts artifacts: 'trivy-result.json', fingerprint: true
+                npx trivy-to-html -i trivy-result.json -o trivy-report.html
+                ls -lh trivy-report.html
 
                 publishHTML(target: [allowMissing: false, alwaysLinkToLastBuild: true, keepAll: true, reportDir: '.', reportFiles: 'trivy-report.html', reportName: 'Trivy Image Scan Report'])
             }
