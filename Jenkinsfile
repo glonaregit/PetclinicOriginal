@@ -17,9 +17,8 @@ pipeline {
     }
 
     stages {
-        /* -------------------------
-         *  CONTINUOUS INTEGRATION
-         * ------------------------- */
+        //  CONTINUOUS INTEGRATion
+
         stage("Build & Unit Tests") {
             steps {
                 sh "mvn clean install"
@@ -94,9 +93,9 @@ pipeline {
             }
         }
 
-        /* -------------------------
-         *  CONTINUOUS DELIVERY
-         * ------------------------- */
+        
+         //  CONTINUOUS DELIVERY
+        
         stage("Docker Push") {
             steps {
                 script {
@@ -133,9 +132,8 @@ pipeline {
             }
         }
 
-        /* -------------------------
-         *  CONTINUOUS DEPLOYMENT
-         * ------------------------- */
+        //  CONTINUOUS DEPLOYMENT
+               
         stage("Deploy to Test VM (Feature Branches)") {
             when { branch pattern: "feature/.*", comparator: "REGEXP" }
             steps {
